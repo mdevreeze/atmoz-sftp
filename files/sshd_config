@@ -20,3 +20,9 @@ ChrootDirectory %h
 
 # Enable this for more logs
 #LogLevel VERBOSE
+
+# Increase number of concurrent sessions from one host
+MaxSessions 100
+
+# Increase number of ongoing connection startups
+MaxStartups 100
