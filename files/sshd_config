@@ -26,3 +26,9 @@ MaxSessions 100
 
 # Increase number of ongoing connection startups
 MaxStartups 100
+
+# Interval between client alive checks
+ClientAliveInterval 15
+
+# How many times do we check if client is alive before closing the connection?
+ClientAliveCountMax 3

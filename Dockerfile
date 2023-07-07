@@ -15,6 +15,9 @@ COPY files/sshd_config /etc/ssh/sshd_config
 COPY files/create-sftp-user /usr/local/bin/
 COPY files/entrypoint /
 
+RUN mkdir -p /home/ursuser/.ssh/keys
+COPY keys/* /home/ursuser/.ssh/keys/
+
 EXPOSE 22
 
 ENTRYPOINT ["/entrypoint"]
