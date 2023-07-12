@@ -14,9 +14,6 @@ properties: # Properties of container group
       ports: # External-facing ports exposed on the instance, must also be set in group ipAddress property
       - protocol: TCP
         port: 22
-      environmentVariables:
-      - name: SFTP_USERS
-        value: "ursuser::"
       resources: # Resource requirements of the instance
         requests:
           memoryInGB: 4
