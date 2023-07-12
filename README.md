@@ -1,4 +1,4 @@
-# Single-User Modified Atmoz/sftp Docker Container
+# Single-User Modified Atmoz/sftp container for use inside Azure Container Instance
 This repository contains a modified version of the original Atmoz/sftp Docker container, configured for single user "usruser" usage with private key authentication and a permanent host key setup. It also contains a increase for the maximum amount of concurrent connections. The modifications and tweaks are done to let this run smooth and securely in Azure Container Instances.
 
 ## Modifications
