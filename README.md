@@ -77,29 +77,29 @@ Copy the ARM template to arm-deploy.yml and fill in the following vairables:
 For more info check: https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli?tabs=azure-cli
 
 1. Login to Azure using the Azure CLI
-   ```ps
+   ```bash
    az login
    ```
 
 2. Login to ACR:
 
-   ```ps
+   ```bash
    az acr login -n <your_azure_container_registry_name>
    ```
 
 3. Build your Docker image:
 
-   ```ps
+   ```bash
    docker build -t <your_azure_container_registry_name>/<your_image_name> .
    ```
 
 4. Push your Docker image to ACR:
 
-   ```ps
+   ```bash
    docker push <your_azure_container_registry_name>/<your_image_name>
    ```
 
 5. Create an Azure Container Instance:
-   ```ps
-   az container create -g <your_resourcegroup> -f .\arm-deploy.yml
+   ```bash
+   az container create -g <your_resourcegroup> -f arm-deploy.yml
    ```
