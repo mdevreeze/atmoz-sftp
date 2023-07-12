@@ -1,180 +1,105 @@
-# SFTP
+# Single-User Modified Atmoz/sftp Docker Container
+This repository contains a modified version of the original Atmoz/sftp Docker container, configured for single user "usruser" usage with private key authentication and a permanent host key setup. It also contains a increase for the maximum amount of concurrent connections. The modifications and tweaks are done to let this run smooth and securely in Azure Container Instances.
 
-![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/atmoz/sftp/build.yml?logo=github) ![GitHub stars](https://img.shields.io/github/stars/atmoz/sftp?logo=github) ![Docker Stars](https://img.shields.io/docker/stars/atmoz/sftp?label=stars&logo=docker) ![Docker Pulls](https://img.shields.io/docker/pulls/atmoz/sftp?label=pulls&logo=docker)
+## Modifications
+1. **Single User Configuration:** This modification configures the SFTP service for a single user named "ursuser".
+2. **Private Key Authentication:** Instead of using password-based authentication, this modification employs a more secure private key authentication method.
+3. **Permanent Host Key:** To increase the reliability and security of the SSH connection and prevent MITM attacks, a permanent host key has been set up. This is nesecarry for running in Azure Container Instances where the container is recreated frequentlently. 
+4. **Increase of concurrent connections** To allow mutliple processes to connect to this SFTP at once, we have increased the amount of allowed connections.
 
-![OpenSSH logo](https://raw.githubusercontent.com/atmoz/sftp/master/openssh.png "Powered by OpenSSH")
+## Getting Started
 
-# Supported tags and respective `Dockerfile` links
+### Prerequisites
+- Docker 
+- Keys
 
-- [`debian`, `latest` (*Dockerfile*)](https://github.com/atmoz/sftp/blob/master/Dockerfile) ![Docker Image Size (debian)](https://img.shields.io/docker/image-size/atmoz/sftp/debian?label=debian&logo=debian&style=plastic)
-- [`alpine` (*Dockerfile*)](https://github.com/atmoz/sftp/blob/master/Dockerfile-alpine) ![Docker Image Size (alpine)](https://img.shields.io/docker/image-size/atmoz/sftp/alpine?label=alpine&logo=Alpine%20Linux&style=plastic)
+### Generate keys
 
-# Securely share your files
+#### Host keys
+The **private** host keys are placed inside `hostkeys`. 
 
-Easy to use SFTP ([SSH File Transfer Protocol](https://en.wikipedia.org/wiki/SSH_File_Transfer_Protocol)) server with [OpenSSH](https://en.wikipedia.org/wiki/OpenSSH).
-
-# Usage
-
-- Define users in (1) command arguments, (2) `SFTP_USERS` environment variable
-  or (3) in file mounted as `/etc/sftp/users.conf` (syntax:
-  `user:pass[:e][:uid[:gid[:dir1[,dir2]...]]] ...`, see below for examples)
-  - Set UID/GID manually for your users if you want them to make changes to
-    your mounted volumes with permissions matching your host filesystem.
-  - Directory names at the end will be created under user's home directory with
-    write permission, if they aren't already present.
-- Mount volumes
-  - The users are chrooted to their home directory, so you can mount the
-    volumes in separate directories inside the user's home directory
-    (/home/user/**mounted-directory**) or just mount the whole **/home** directory.
-    Just remember that the users can't create new files directly under their
-    own home directory, so make sure there are at least one subdirectory if you
-    want them to upload files.
-  - For consistent server fingerprint, mount your own host keys (i.e. `/etc/ssh/ssh_host_*`)
-
-# Examples
-
-## Simplest docker run example
-
-```
-docker run -p 22:22 -d atmoz/sftp foo:pass:::upload
+You can generate them using (bash and OpenSSH):
+```bash 
+ssh-keygen -t ed25519 -f keys/ssh_host_ed25519_key < /dev/null
+ssh-keygen -t rsa -b 4096 -f keys/ssh_host_rsa_key < /dev/null
 ```
 
-User "foo" with password "pass" can login with sftp and upload files to a folder called "upload". No mounted directories or custom UID/GID. Later you can inspect the files and use `--volumes-from` to mount them somewhere else (or see next example).
+#### Authentication keys
+Generate your keys using putty-gen and place the **public** keys inside a file in the `keys` directory.
 
-## Sharing a directory from your computer
+![](putty-gen.png)
 
-Let's mount a directory and set UID:
 
-```
-docker run \
-    -v <host-dir>/upload:/home/foo/upload \
-    -p 2222:22 -d atmoz/sftp \
-    foo:pass:1001
-```
+### Build
+⚠️⚠️ Be carefull when building the Docker image on Windows with **Windows line endings**. The docker container expects file endings to be LF and will break with cryptic errors on CRLF line endings. ⚠️⚠️ You can use the dos2unix program to fix these, just do a `dos2unix -R .` and all files should be unix line endings again.
 
-### Using Docker Compose:
-
-```
-sftp:
-    image: atmoz/sftp
-    volumes:
-        - <host-dir>/upload:/home/foo/upload
-    ports:
-        - "2222:22"
-    command: foo:pass:1001
+```bash
+docker build -t <your_image_name> .
 ```
 
-### Logging in
+### Usage
+To run the container, use the following command:
 
-The OpenSSH server runs by default on port 22, and in this example, we are forwarding the container's port 22 to the host's port 2222. To log in with the OpenSSH client, run: `sftp -P 2222 foo@<host-ip>`
-
-## Store users in config
-
-```
-docker run \
-    -v <host-dir>/users.conf:/etc/sftp/users.conf:ro \
-    -v mySftpVolume:/home \
-    -p 2222:22 -d atmoz/sftp
+```bash
+docker run -d -p 22:22 <your_image_name>
 ```
 
-<host-dir>/users.conf:
+Connect with your SFTP client (WinSCP or Filezilla) using the following settings:
 
-```
-foo:123:1001:100
-bar:abc:1002:100
-baz:xyz:1003:100
-```
+* **Host**: localhost
+* **Port**: 22
+* **Username**: ursuser
+* **Password**: leave blank and setup the **private** key in the client settings
 
-## Encrypted password
+## Deploy to Azure
 
-Add `:e` behind password to mark it as encrypted. Use single quotes if using terminal.
+## Preqrequisites
 
-```
-docker run \
-    -v <host-dir>/share:/home/foo/share \
-    -p 2222:22 -d atmoz/sftp \
-    'foo:$1$0G2g0GSt$ewU0t6GXG15.0hWoOX8X9.:e:1001'
-```
+* A resource group to hold everything
+* An Azure Container Registry 
+* An Azure Storage account
+* An Azure File Share inside this Storage account
 
-Tip: you can use this Python code to generate encrypted passwords:  
-`docker run --rm python:alpine python -c "import crypt; print(crypt.crypt('YOUR_PASSWORD'))"`
+## Configurate ARM template
+Copy the ARM template to arm-deploy.yml and fill in the following vairables:
+* **<name_of_container>**: the name of the container, can be any name and will appear in Azure accordingly
+* **<your_azure_container_registry_name>**: the name of your Azure Container Registry, needs to exist on Azure
+* **<your_image_name>**: name you gave the image when you build it in Docker
+* **<acr_username>**: retrievable from the Access keys menu in your container registry
+* **<acr_password>**: retrievable from the Access keys menu in your container registry
+* **<dns_alias>**: any alias, will be used as subdomain and used to connect to the container
+* **<azure_share_name>**: name of the File Share, it needs to exist and be created in Azure under the right storage account
+* **<storage_account_name>**: name of the Azure Storage account where the File Share exists
+* **<storage_account_key>**: access key, you can find this in the Storage account under Access Keys
+ 
 
-## Logging in with SSH keys
+## Deploy
+For more info check: https://learn.microsoft.com/en-us/azure/container-registry/container-registry-get-started-docker-cli?tabs=azure-cli
 
-Mount public keys in the user's `.ssh/keys/` directory. All keys are automatically appended to `.ssh/authorized_keys` (you can't mount this file directly, because OpenSSH requires limited file permissions). In this example, we do not provide any password, so the user `foo` can only login with his SSH key.
+1. Login to Azure using the Azure CLI
+   ```ps
+   az login
+   ```
 
-```
-docker run \
-    -v <host-dir>/id_rsa.pub:/home/foo/.ssh/keys/id_rsa.pub:ro \
-    -v <host-dir>/id_other.pub:/home/foo/.ssh/keys/id_other.pub:ro \
-    -v <host-dir>/share:/home/foo/share \
-    -p 2222:22 -d atmoz/sftp \
-    foo::1001
-```
+2. Login to ACR:
 
-## Providing your own SSH host key (recommended)
+   ```ps
+   az acr login -n <your_azure_container_registry_name>
+   ```
 
-This container will generate new SSH host keys at first run. To avoid that your users get a MITM warning when you recreate your container (and the host keys changes), you can mount your own host keys.
+3. Build your Docker image:
 
-```
-docker run \
-    -v <host-dir>/ssh_host_ed25519_key:/etc/ssh/ssh_host_ed25519_key \
-    -v <host-dir>/ssh_host_rsa_key:/etc/ssh/ssh_host_rsa_key \
-    -v <host-dir>/share:/home/foo/share \
-    -p 2222:22 -d atmoz/sftp \
-    foo::1001
-```
+   ```ps
+   docker build -t <your_azure_container_registry_name>/<your_image_name> .
+   ```
 
-Tip: you can generate your keys with these commands:
+4. Push your Docker image to ACR:
 
-```
-ssh-keygen -t ed25519 -f ssh_host_ed25519_key < /dev/null
-ssh-keygen -t rsa -b 4096 -f ssh_host_rsa_key < /dev/null
-```
+   ```ps
+   docker push <your_azure_container_registry_name>/<your_image_name>
+   ```
 
-## Execute custom scripts or applications
-
-Put your programs in `/etc/sftp.d/` and it will automatically run when the container starts.
-See next section for an example.
-
-## Bindmount dirs from another location
-
-If you are using `--volumes-from` or just want to make a custom directory available in user's home directory, you can add a script to `/etc/sftp.d/` that bindmounts after container starts.
-
-```
-#!/bin/bash
-# File mounted as: /etc/sftp.d/bindmount.sh
-# Just an example (make your own)
-
-function bindmount() {
-    if [ -d "$1" ]; then
-        mkdir -p "$2"
-    fi
-    mount --bind $3 "$1" "$2"
-}
-
-# Remember permissions, you may have to fix them:
-# chown -R :users /data/common
-
-bindmount /data/admin-tools /home/admin/tools
-bindmount /data/common /home/dave/common
-bindmount /data/common /home/peter/common
-bindmount /data/docs /home/peter/docs --read-only
-```
-
-**NOTE:** Using `mount` requires that your container runs with the `CAP_SYS_ADMIN` capability turned on. [See this answer for more information](https://github.com/atmoz/sftp/issues/60#issuecomment-332909232).
-
-# What's the difference between Debian and Alpine?
-
-The biggest differences are in size and OpenSSH version. [Alpine](https://hub.docker.com/_/alpine/) is 10 times smaller than [Debian](https://hub.docker.com/_/debian/). OpenSSH version can also differ, as it's two different teams maintaining the packages. Debian is generally considered more stable and only bugfixes and security fixes are added after each Debian release (about 2 years). Alpine has a faster release cycle (about 6 months) and therefore newer versions of OpenSSH. As I'm writing this, Debian has version 7.4 while Alpine has version 7.5. Recommended reading: [Comparing Debian vs Alpine for container & Docker apps](https://www.turnkeylinux.org/blog/alpine-vs-debian)
-
-# What version of OpenSSH do I get?
-
-It depends on which linux distro and version you choose (see available images at the top). You can see what version you get by checking the distro's packages online. I have provided direct links below for easy access.
-
-- [List of `openssh` packages on Alpine releases](https://pkgs.alpinelinux.org/packages?name=openssh&branch=&repo=main&arch=x86_64)
-- [List of `openssh-server` packages on Debian releases](https://packages.debian.org/search?keywords=openssh-server&searchon=names&exact=1&suite=all&section=main)
-
-# Daily builds
-
-Images are automatically built daily to get the newest version of OpenSSH provided by the package managers.
+5. Create an Azure Container Instance:
+   ```ps
+   az container create -g <your_resourcegroup> -f .\arm-deploy.yml
+   ```

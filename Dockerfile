@@ -15,9 +15,15 @@ COPY files/sshd_config /etc/ssh/sshd_config
 COPY files/create-sftp-user /usr/local/bin/
 COPY files/entrypoint /
 
+# custom changes
+COPY files/entrypoint2 /
 RUN mkdir -p /home/ursuser/.ssh/keys
 COPY keys/* /home/ursuser/.ssh/keys/
+COPY hostkeys/ssh_host_ed25519_key /etc/ssh/ssh_host_ed25519_key 
+COPY hostkeys/ssh_host_rsa_key /etc/ssh/ssh_host_rsa_key 
+# custom changes end
 
 EXPOSE 22
 
-ENTRYPOINT ["/entrypoint"]
+# use custom entrypoint
+ENTRYPOINT ["/entrypoint2"]
