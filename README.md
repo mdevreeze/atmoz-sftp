@@ -103,3 +103,4 @@ For more info check: https://learn.microsoft.com/en-us/azure/container-registry/
    ```bash
    az container create -g <your_resourcegroup> -f arm-deploy.yml
    ```
+If the deployment succeeded, you can now use your SFTP client to connect to the host _<dns_alias>.westeurope.azurecontainer.io_.
