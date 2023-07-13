@@ -41,7 +41,7 @@ docker build -t <your_image_name> .
 To run the container, use the following command:
 
 ```bash
-docker run -d -p 22:22 <your_image_name>
+docker run -d -v ./sftpdir:/home/ursuser/upload -p 22:22 <your_image_name>
 ```
 
 Connect with your SFTP client (WinSCP or Filezilla) using the following settings:
